@@ -1,0 +1,1413 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>PromptMate | AI Prompt Assistant</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <style>
+        /* Hover-to-reveal sidebar */
+        #sidebar-hover-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 18px;
+            height: 100vh;
+            z-index: 10001;
+        }
+
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform 220ms ease;
+            z-index: 10002 !important;
+        }
+
+        body.sidebar-open .sidebar {
+            transform: translateX(0);
+        }
+
+        /* Let the workspace use the space previously occupied by the sidebar. */
+        .main-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar {
+                transition: none;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+    <!-- =================================
+         SIDEBAR
+    ================================== -->
+
+    <div id="sidebar-hover-zone" aria-hidden="true"></div>
+
+    <aside class="sidebar" id="app-sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">P</div>
+            <span>PromptMate</span>
+        </div>
+
+        <div class="sidebar-label">WORKSPACE</div>
+
+        <nav class="navigation">
+
+            <button class="nav-item active"
+                    onclick="showSection('dashboard')">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </button>
+
+            <button class="nav-item"
+                    onclick="showSection('builder')">
+                <span class="nav-icon">✧</span>
+                Prompt Builder
+            </button>
+
+            <button class="nav-item"
+                    onclick="showSection('improve')">
+                <span class="nav-icon">↗</span>
+                Prompt Improvement
+            </button>
+
+            <button class="nav-item"
+                    onclick="showSection('history')">
+                <span class="nav-icon">◷</span>
+                Prompt History
+            </button>
+
+            <button class="nav-item"
+                    onclick="showSection('learn')">
+                <span class="nav-icon">▤</span>
+                Learn Prompting
+            </button>
+
+
+            <button class="nav-item"
+                    onclick="showSection('preferences')">
+                <span class="nav-icon">⚙</span>
+                User Preferences
+            </button>
+
+            <button class="nav-item"
+                    onclick="showSection('themes')">
+                <span class="nav-icon">🎨</span>
+                Theme Studio
+            </button>
+
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <div class="sidebar-help">
+                <div class="help-icon">?</div>
+
+                <div>
+                    <strong>Need help?</strong>
+                    <small>Learn to write better prompts.</small>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+    <div class="profile-avatar">
+        {{ user_name[:1] | upper }}
+    </div>
+
+    <div class="profile-info">
+        <strong>{{ user_name }}</strong>
+        <small>PromptMate Account</small>
+
+        <form method="POST" action="{{ url_for('logout') }}">
+            <button type="submit" class="logout-btn">
+                Sign Out
+            </button>
+        </form>
+    </div>
+</div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =================================
+         MAIN CONTENT
+    ================================== -->
+
+    <main class="main-content">
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+<div>
+                <span class="breadcrumb">Workspace /</span>
+                <strong id="page-name">Dashboard</strong>
+            </div>
+
+            
+<div class="topbar-right">
+
+    <button
+    type="button"
+    class="theme-toggle"
+    onclick="startTutorial()">
+    🎓 Take a Tour
+</button>
+
+    <button
+        type="button"
+        id="theme-toggle"
+        class="theme-toggle"
+        onclick="toggleTheme()"
+        aria-label="Switch to dark mode"
+        title="Switch theme">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label">Dark Mode</span>
+    </button>
+
+    <span class="status-dot"></span>
+    <span>Ready to create</span>
+
+</div>
+
+
+        </header>
+
+
+        <!-- =================================
+             DASHBOARD
+        ================================== -->
+
+        <section id="dashboard" class="page active">
+
+            <div class="welcome-banner">
+
+                <div class="welcome-content">
+
+                    <span class="eyebrow">
+                        YOUR AI PROMPT WORKSPACE
+                    </span>
+
+                    <h1>
+                        Think better.<br>
+                        <span>Prompt smarter.</span>
+                    </h1>
+
+                    <p>
+                        Turn your ideas into clear, effective AI prompts.
+                        No technical knowledge required.
+                    </p>
+
+                    <div class="welcome-actions">
+
+    <button class="primary-btn"
+            onclick="showSection('builder')">
+        Start Building →
+    </button>
+
+    <button class="welcome-secondary-btn"
+            onclick="showSection('improve')">
+        Improve a Prompt ↗
+    </button>
+
+</div>
+
+                </div>
+
+                <div class="welcome-art">
+
+                    <div class="art-circle">
+                        <div class="art-symbol">✧</div>
+                        <div class="art-small one">AI</div>
+                        <div class="art-small two">✦</div>
+                        <div class="art-small three">+</div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-heading">
+
+                <div>
+                    <h2>Your workspace</h2>
+                    <p>Everything you need to create better prompts.</p>
+                </div>
+
+            </div>
+
+
+            <!-- FEATURE CARDS -->
+
+            <div class="feature-grid">
+
+                <div class="feature-card builder-card">
+
+                    <div class="feature-icon purple-icon">✧</div>
+
+                    <span class="feature-tag">CREATE</span>
+
+                    <h3>Prompt Builder</h3>
+
+                    <p>
+                        Build detailed AI prompts by describing
+                        your goal and selecting your preferences.
+                    </p>
+
+                    <button class="text-btn"
+                            onclick="showSection('builder')">
+                        Open Builder →
+                    </button>
+
+                </div>
+
+
+                <div class="feature-card improvement-card">
+
+                    <div class="feature-icon blue-icon">↗</div>
+
+                    <span class="feature-tag">IMPROVE</span>
+
+                    <h3>Prompt Improvement</h3>
+
+                    <p>
+                        Transform unclear prompts into detailed,
+                        effective AI instructions.
+                    </p>
+
+                    <button class="text-btn"
+                            onclick="showSection('improve')">
+                        Improve a Prompt →
+                    </button>
+
+                </div>
+
+
+                <div class="feature-card learning-card">
+
+                    <div class="feature-icon orange-icon">▤</div>
+
+                    <span class="feature-tag">LEARN</span>
+
+                    <h3>Learn Prompting</h3>
+
+                    <p>
+                        Understand prompt-writing techniques
+                        through simple examples.
+                    </p>
+
+                    <button class="text-btn"
+                            onclick="showSection('learn')">
+                        Start Learning →
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- QUICK START -->
+
+            <div class="quick-start">
+
+                <div>
+
+                    <span class="eyebrow">QUICK START</span>
+
+                    <h2>Have an idea in mind?</h2>
+
+                    <p>
+                        Start with your goal. PromptMate will help
+                        you structure the instructions.
+                    </p>
+
+                </div>
+
+                <button class="primary-btn"
+                        onclick="showSection('builder')">
+                    Create a Prompt →
+                </button>
+
+            </div>
+
+
+            <!-- RECENT PROMPTS -->
+
+            <div class="recent-history">
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2>Recent Prompts</h2>
+                        <p>Your recently created AI prompts.</p>
+                    </div>
+
+                    <button class="text-btn"
+                            onclick="showSection('history')">
+                        View All →
+                    </button>
+
+                </div>
+
+                <div id="dashboard-history"
+                     class="dashboard-history-list">
+
+                    <p class="empty-history">
+                        Your recent prompts will appear here.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================
+             PROMPT BUILDER
+        ================================== -->
+
+        <section id="builder" class="page">
+
+            <div class="page-heading">
+
+                <span class="eyebrow">CREATE YOUR PROMPT</span>
+
+                <h1>Guided Prompt Builder</h1>
+
+                <p>
+                    Tell us what you need. We'll help you structure
+                    a clear and effective AI prompt.
+                </p>
+
+            </div>
+
+
+<!-- PROMPT TEMPLATE LIBRARY -->
+
+<div class="template-library">
+
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">GET STARTED FASTER</span>
+            <h2>Prompt Template Library</h2>
+            <p>Choose a ready-made template to start building your prompt.</p>
+        </div>
+    </div>
+
+    <div class="template-grid">
+
+        <button class="template-card"
+                type="button"
+                onclick="applyTemplate('study')">
+
+            <span class="template-icon">📚</span>
+            <h3>Study Assistant</h3>
+            <p>Learn difficult topics with simple explanations and examples.</p>
+            <span class="template-link">Use Template →</span>
+
+        </button>
+
+        <button class="template-card"
+                type="button"
+                onclick="applyTemplate('writing')">
+
+            <span class="template-icon">✍️</span>
+            <h3>Content Writer</h3>
+            <p>Create structured, engaging and clear written content.</p>
+            <span class="template-link">Use Template →</span>
+
+        </button>
+
+        <button class="template-card"
+                type="button"
+                onclick="applyTemplate('coding')">
+
+            <span class="template-icon">💻</span>
+            <h3>Coding Assistant</h3>
+            <p>Understand code, solve programming problems and debug errors.</p>
+            <span class="template-link">Use Template →</span>
+
+        </button>
+
+        <button class="template-card"
+                type="button"
+                onclick="applyTemplate('research')">
+
+            <span class="template-icon">🔍</span>
+            <h3>Research Assistant</h3>
+            <p>Organize research topics and explain important findings.</p>
+            <span class="template-link">Use Template →</span>
+
+        </button>
+
+        <button class="template-card"
+                type="button"
+                onclick="applyTemplate('presentation')">
+
+            <span class="template-icon">📊</span>
+            <h3>Presentation Maker</h3>
+            <p>Plan presentation content with organized slide topics.</p>
+            <span class="template-link">Use Template →</span>
+
+        </button>
+
+    </div>
+
+</div>
+
+<!-- END PROMPT TEMPLATE LIBRARY -->
+
+
+            <div class="builder-layout">
+
+                <!-- INPUT FORM -->
+
+                <div class="builder-panel">
+
+                    <div class="panel-heading">
+
+                        <div class="panel-number">01</div>
+
+                        <div>
+                            <h2>Define your task</h2>
+                            <p>Provide the details of your request.</p>
+                        </div>
+
+                    </div>
+
+
+                    <label for="category">Task Category</label>
+
+                    <select id="category">
+                        <option>Study and Learning</option>
+                        <option>Writing</option>
+                        <option>Coding</option>
+                        <option>Research</option>
+                        <option>Creative Ideas</option>
+                        <option>Other</option>
+                    </select>
+
+
+                    <label for="goal">
+                        What do you want AI to do?
+                    </label>
+
+                    <textarea id="goal"
+                        placeholder="Example: Explain artificial intelligence to a beginner..."></textarea>
+
+
+                    <label for="context">
+                        Additional Context
+                    </label>
+
+                    <textarea id="context"
+                        placeholder="Add relevant information, background or specific requirements..."></textarea>
+
+<!-- PROMPT QUALITY SCORE -->
+
+<div class="quality-panel">
+
+    <div class="quality-heading">
+        <div>
+            <span class="eyebrow">PROMPT ANALYSIS</span>
+            <h3>Prompt Quality Score</h3>
+            <p>Check how clear and effective your prompt is.</p>
+        </div>
+
+        <div class="quality-score-circle">
+            <span id="quality-score">0</span>
+            <small>/100</small>
+        </div>
+    </div>
+
+    <div class="quality-progress">
+        <div id="quality-progress-bar"></div>
+    </div>
+
+    <div class="quality-metrics">
+
+        <div class="quality-metric">
+            <span>Clarity</span>
+            <strong id="clarity-score">0%</strong>
+        </div>
+
+        <div class="quality-metric">
+            <span>Context</span>
+            <strong id="context-score">0%</strong>
+        </div>
+
+        <div class="quality-metric">
+            <span>Specificity</span>
+            <strong id="specificity-score">0%</strong>
+        </div>
+
+    </div>
+
+    <div class="quality-feedback">
+        <h4 id="quality-label">Waiting for your prompt</h4>
+
+        <ul id="quality-suggestions">
+            <li>Enter a task to receive quality feedback.</li>
+        </ul>
+    </div>
+
+</div>
+
+<!-- END PROMPT QUALITY SCORE -->
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="panel-heading">
+
+                        <div class="panel-number">02</div>
+
+                        <div>
+                            <h2>Customize your response</h2>
+                            <p>Choose how you want the AI to respond.</p>
+                        </div>
+
+                    </div>
+
+
+                    <label for="audience">Target Audience</label>
+
+                    <select id="audience">
+                        <option>Beginner</option>
+                        <option>College Student</option>
+                        <option>Professional</option>
+                        <option>Expert</option>
+                    </select>
+
+
+                    <label for="tone">Preferred Tone</label>
+
+                    <select id="tone">
+                        <option>Simple</option>
+                        <option>Professional</option>
+                        <option>Academic</option>
+                        <option>Friendly</option>
+                    </select>
+
+
+                    <label for="format">Output Format</label>
+
+                    <select id="format">
+                        <option>Bullet Points</option>
+                        <option>Structured Notes</option>
+                        <option>Step-by-Step Guide</option>
+                        <option>Table</option>
+                        <option>Paragraph</option>
+                    </select>
+
+
+                    <button class="primary-btn generate-btn"
+                            onclick="generatePrompt()">
+                        ✧ Generate My Prompt
+                    </button>
+
+                    <p class="form-note">
+                        Your preferences will be used to structure
+                        your generated prompt.
+                    </p>
+
+                </div>
+
+
+                <!-- GENERATED OUTPUT -->
+
+                <div class="output-panel">
+
+                    <div class="output-header">
+
+                        <div>
+                            <span class="eyebrow">YOUR RESULT</span>
+                            <h2>Generated Prompt</h2>
+                            <p>Your structured AI instructions appear here.</p>
+                        </div>
+
+                        <div class="output-status">
+                            <span class="status-dot"></span>
+                            Ready
+                        </div>
+
+                    </div>
+
+
+                    <div class="output-content">
+
+                        <div class="output-placeholder">
+
+                            <div class="placeholder-icon">✧</div>
+
+                            <h3>Your prompt will appear here</h3>
+
+                            <p>
+                                Complete the form and click
+                                Generate My Prompt to see your result.
+                            </p>
+
+                        </div>
+
+                        <pre id="result">Your prompt will appear here.</pre>
+
+                    </div>
+
+
+                    <button class="primary-btn copy-btn"
+                            onclick="copyPrompt()">
+                        Copy Prompt ▣
+                    </button>
+
+
+                    <div class="output-tip">
+
+                        <strong>TIP</strong>
+
+                        <p>
+                            A good prompt includes a clear task,
+                            relevant context and specific instructions.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================
+             PROMPT IMPROVEMENT
+        ================================== -->
+
+        <section id="improve" class="page">
+
+            <div class="page-heading">
+
+                <span class="eyebrow">REFINE YOUR INSTRUCTIONS</span>
+
+                <h1>Prompt Improvement</h1>
+
+                <p>
+                    Turn unclear instructions into powerful,
+                    structured AI prompts.
+                </p>
+
+            </div>
+
+
+            <div class="builder-layout">
+
+                <!-- INPUT -->
+
+                <div class="builder-panel">
+
+                    <div class="panel-heading">
+
+                        <div class="panel-number">01</div>
+
+                        <div>
+                            <h2>Your original prompt</h2>
+                            <p>Enter the prompt you want to improve.</p>
+                        </div>
+
+                    </div>
+
+
+                    <label for="originalPrompt">
+                        Existing Prompt
+                    </label>
+
+                    <textarea
+                        id="originalPrompt"
+                        placeholder="Example: Explain computers..."
+                    ></textarea>
+
+
+                    <div class="form-divider"></div>
+
+
+                    <div class="panel-heading">
+
+                        <div class="panel-number">02</div>
+
+                        <div>
+                            <h2>Customize improvement</h2>
+                            <p>Choose how the improved prompt should be written.</p>
+                        </div>
+
+                    </div>
+
+
+                    <label for="improveAudience">
+                        Target Audience
+                    </label>
+
+                    <select id="improveAudience">
+                        <option>Beginner</option>
+                        <option>College Student</option>
+                        <option>Professional</option>
+                        <option>Expert</option>
+                    </select>
+
+
+                    <label for="improveTone">
+                        Preferred Tone
+                    </label>
+
+                    <select id="improveTone">
+                        <option>Simple</option>
+                        <option>Professional</option>
+                        <option>Academic</option>
+                        <option>Friendly</option>
+                    </select>
+
+
+                    <label for="improveFormat">
+                        Output Format
+                    </label>
+
+                    <select id="improveFormat">
+                        <option>Bullet Points</option>
+                        <option>Structured Notes</option>
+                        <option>Step-by-Step Guide</option>
+                        <option>Table</option>
+                        <option>Paragraph</option>
+                    </select>
+
+
+                    <button class="primary-btn generate-btn"
+                            onclick="improvePrompt()">
+                        ✧ Improve My Prompt
+                    </button>
+
+                    <p class="form-note">
+                        PromptMate will analyze your original prompt
+                        and suggest a clearer version.
+                    </p>
+
+                </div>
+
+
+                <!-- IMPROVED OUTPUT -->
+
+                <div class="output-panel">
+
+                    <div class="output-header">
+
+                        <div>
+                            <span class="eyebrow">YOUR RESULT</span>
+                            <h2>Improved Prompt</h2>
+                            <p>Your enhanced AI instructions appear here.</p>
+                        </div>
+
+                        <div class="output-status">
+                            <span class="status-dot"></span>
+                            Ready
+                        </div>
+
+                    </div>
+
+
+                    <div class="output-content">
+
+                        <div class="output-placeholder">
+
+                            <div class="placeholder-icon">↗</div>
+
+                            <h3>Your improved prompt will appear here</h3>
+
+                            <p>
+                                Enter an existing prompt and click
+                                Improve My Prompt to get started.
+                            </p>
+
+                        </div>
+
+                        <div id="improvedResult" class="markdown-output">Your improved prompt will appear here.</div>
+
+<div class="comparison-panel" id="prompt-comparison">
+
+    <div class="comparison-heading">
+        <span class="eyebrow">PROMPT ANALYSIS</span>
+        <h3>Before and After Comparison</h3>
+        <p>See how your prompt has improved.</p>
+    </div>
+
+    <div class="comparison-grid">
+
+        <div class="comparison-card before-card">
+            <span class="comparison-label">BEFORE</span>
+            <h4>Original Prompt</h4>
+            <p id="comparison-original">
+                Your original prompt will appear here.
+            </p>
+        </div>
+
+        <div class="comparison-card after-card">
+            <span class="comparison-label">AFTER</span>
+            <h4>Improved Prompt</h4>
+            <p id="comparison-improved">
+                Your improved prompt will appear here.
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+                    </div>
+
+
+                    <button class="primary-btn copy-btn"
+                            onclick="copyImprovedPrompt()">
+                        Copy Improved Prompt ▣
+                    </button>
+
+
+                    <div class="output-tip">
+
+                        <strong>IMPROVEMENT SUGGESTIONS</strong>
+
+                        <div id="improvementSuggestions">
+                            <p>
+                                Your suggestions will appear here
+                                after improving your prompt.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================
+             PROMPT HISTORY
+        ================================== -->
+
+        <section id="history" class="page">
+
+            <div class="page-heading">
+
+                <span class="eyebrow">YOUR WORKSPACE</span>
+
+                <h1>Prompt History</h1>
+
+                <p>
+                    View, search and manage all your previously
+                    generated and improved prompts.
+                </p>
+
+            </div>
+
+
+            <!-- HISTORY SUMMARY -->
+
+            <div class="history-summary">
+
+                <div>
+                    <span class="eyebrow">SAVED PROMPTS</span>
+                    <h2 id="history-count">0</h2>
+                    <p>Total saved prompts</p>
+                </div>
+
+                <div class="history-icon">◷</div>
+
+            </div>
+
+
+            <!-- SEARCH AND FILTER -->
+
+            <div class="history-toolbar">
+
+                <input
+                    type="search"
+                    id="history-search"
+                    placeholder="Search your prompts..."
+                    aria-label="Search prompt history"
+                >
+
+                <select id="history-filter">
+                    <option value="all">All Prompts</option>
+                    <option value="generated">Generated</option>
+                    <option value="improved">Improved</option>
+                </select>
+
+                <select id="history-sort">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="alphabetical">A - Z</option>
+                </select>
+
+            </div>
+
+
+            <!-- HISTORY ACTIONS -->
+
+            <div class="history-actions">
+
+                <button class="text-btn"
+                        onclick="exportHistory('json')">
+                    ↓ Export JSON
+                </button>
+
+                <button class="text-btn"
+                        onclick="exportHistory('csv')">
+                    ↓ Export CSV
+                </button>
+
+                <button class="clear-history-btn"
+                        onclick="clearPromptHistory()">
+                    Clear History
+                </button>
+
+            </div>
+
+
+            <!-- HISTORY LIST -->
+
+            <div id="history-list" class="history-list">
+
+                <div class="history-empty">
+
+                    <div class="empty-icon">✧</div>
+
+                    <h3>No prompts saved yet</h3>
+
+                    <p>
+                        Your generated and improved prompts
+                        will automatically appear here.
+                    </p>
+
+                    <button class="primary-btn"
+                            onclick="showSection('builder')">
+                        Create Your First Prompt →
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================
+             LEARN PROMPTING
+        ================================== -->
+
+        <section id="learn" class="page">
+
+            <div class="page-heading">
+
+                <span class="eyebrow">LEARN AND EXPLORE</span>
+
+                <h1>Learn Prompting</h1>
+
+                <p>
+                    Understand how to write clear and effective
+                    instructions for AI tools.
+                </p>
+
+            </div>
+
+
+            <div class="feature-grid">
+
+                <div class="feature-card">
+
+                    <div class="feature-icon purple-icon">01</div>
+
+                    <span class="feature-tag">BASICS</span>
+
+                    <h3>Be Specific</h3>
+
+                    <p>
+                        Clearly explain what you want the AI to do.
+                        Avoid vague or confusing instructions.
+                    </p>
+
+                </div>
+
+
+                <div class="feature-card">
+
+                    <div class="feature-icon blue-icon">02</div>
+
+                    <span class="feature-tag">CONTEXT</span>
+
+                    <h3>Provide Context</h3>
+
+                    <p>
+                        Include relevant background information
+                        so the AI can understand your requirements.
+                    </p>
+
+                </div>
+
+
+                <div class="feature-card">
+
+                    <div class="feature-icon orange-icon">03</div>
+
+                    <span class="feature-tag">ROLE</span>
+
+                    <h3>Assign a Role</h3>
+
+                    <p>
+                        Tell the AI which role to adopt, such as
+                        teacher, researcher or coding assistant.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="quick-start">
+
+                <div>
+
+                    <span class="eyebrow">PRACTICE WHAT YOU LEARN</span>
+
+                    <h2>Ready to create a better prompt?</h2>
+
+                    <p>
+                        Apply these techniques using the guided
+                        Prompt Builder.
+                    </p>
+
+                </div>
+
+                <button class="primary-btn"
+                        onclick="showSection('builder')">
+                    Try Prompt Builder →
+                </button>
+
+            </div>
+
+
+            <div class="builder-panel">
+
+                <h2>Example: Weak vs. Strong Prompt</h2>
+
+                <div class="output-tip">
+                    <strong>WEAK PROMPT</strong>
+                    <p>Explain computers.</p>
+                </div>
+
+                <div class="output-tip">
+                    <strong>STRONG PROMPT</strong>
+                    <p>
+                        Act as a computer science teacher.
+                        Explain the basic components of a computer
+                        to a beginner using simple language,
+                        practical examples and bullet points.
+                    </p>
+                </div>
+
+                <p class="form-note">
+                    The stronger prompt provides a role, task,
+                    audience, tone and output format.
+                </p>
+
+            </div>
+
+        </section>
+
+
+<!-- USER PREFERENCES -->
+
+<section id="preferences" class="page">
+
+    <div class="page-heading">
+        <span class="eyebrow">PERSONALIZE YOUR WORKSPACE</span>
+        <h1>User Preferences</h1>
+        <p>Customize PromptMate to match your working style.</p>
+    </div>
+
+    <div class="builder-panel preferences-panel">
+
+        <div class="panel-heading">
+            <div class="panel-number">01</div>
+            <div>
+                <h2>Default response settings</h2>
+                <p>These preferences will automatically apply to your prompts.</p>
+            </div>
+        </div>
+
+        <label for="preference-audience">Default Target Audience</label>
+        <select id="preference-audience">
+            <option>Beginner</option>
+            <option>College Student</option>
+            <option>Professional</option>
+            <option>Expert</option>
+        </select>
+
+        <label for="preference-tone">Preferred Tone</label>
+        <select id="preference-tone">
+            <option>Simple</option>
+            <option>Professional</option>
+            <option>Academic</option>
+            <option>Friendly</option>
+        </select>
+
+        <label for="preference-format">Default Output Format</label>
+        <select id="preference-format">
+            <option>Bullet Points</option>
+            <option>Structured Notes</option>
+            <option>Step-by-Step Guide</option>
+            <option>Table</option>
+            <option>Paragraph</option>
+        </select>
+
+        <div class="form-divider"></div>
+
+        <div class="panel-heading">
+            <div class="panel-number">02</div>
+            <div>
+                <h2>Appearance</h2>
+                <p>Choose your preferred workspace theme.</p>
+            </div>
+        </div>
+
+        <label for="preference-theme">Workspace Theme</label>
+        <select id="preference-theme">
+            <option value="light">Light Mode</option>
+            <option value="dark">Dark Mode</option>
+        </select>
+
+        <button type="button"
+                class="primary-btn generate-btn"
+                onclick="savePreferencesFromPage()">
+            Save Preferences
+        </button>
+
+        <button type="button"
+                class="text-btn"
+                onclick="resetPreferences()">
+            Reset to Defaults
+        </button>
+
+        <p id="preferences-message" class="form-note"
+           aria-live="polite"></p>
+
+    </div>
+
+</section>
+
+<!-- END USER PREFERENCES -->
+
+<!-- THEME STUDIO -->
+
+<section id="themes" class="page">
+
+    <div class="page-heading">
+        <span class="eyebrow">PERSONALIZE YOUR WORKSPACE</span>
+        <h1>Theme Studio</h1>
+        <p>Choose a color theme for your PromptMate workspace. Your selection is saved automatically.</p>
+    </div>
+
+    <div class="theme-studio-grid">
+
+        <button type="button" class="theme-option theme-option-midnight"
+                data-theme-option="midnight" onclick="selectAppTheme('midnight')">
+            <span class="theme-preview">
+                <span class="theme-preview-sidebar"></span>
+                <span class="theme-preview-content">
+                    <span></span><span></span><span></span>
+                </span>
+            </span>
+            <span class="theme-option-info">
+                <strong>Midnight Purple</strong>
+                <small>Deep purple surfaces with violet accents</small>
+                <span class="theme-option-status" data-theme-status="midnight">Select theme</span>
+            </span>
+        </button>
+
+        <button type="button" class="theme-option theme-option-ocean"
+                data-theme-option="ocean" onclick="selectAppTheme('ocean')">
+            <span class="theme-preview">
+                <span class="theme-preview-sidebar"></span>
+                <span class="theme-preview-content">
+                    <span></span><span></span><span></span>
+                </span>
+            </span>
+            <span class="theme-option-info">
+                <strong>Ocean Blue</strong>
+                <small>Dark navy surfaces with blue accents</small>
+                <span class="theme-option-status" data-theme-status="ocean">Select theme</span>
+            </span>
+        </button>
+
+        <button type="button" class="theme-option theme-option-graphite"
+                data-theme-option="graphite" onclick="selectAppTheme('graphite')">
+            <span class="theme-preview">
+                <span class="theme-preview-sidebar"></span>
+                <span class="theme-preview-content">
+                    <span></span><span></span><span></span>
+                </span>
+            </span>
+            <span class="theme-option-info">
+                <strong>Graphite</strong>
+                <small>Neutral charcoal surfaces with silver accents</small>
+                <span class="theme-option-status" data-theme-status="graphite">Select theme</span>
+            </span>
+        </button>
+
+        <button type="button" class="theme-option theme-option-lavender"
+                data-theme-option="lavender" onclick="selectAppTheme('lavender')">
+            <span class="theme-preview">
+                <span class="theme-preview-sidebar"></span>
+                <span class="theme-preview-content">
+                    <span></span><span></span><span></span>
+                </span>
+            </span>
+            <span class="theme-option-info">
+                <strong>Lavender</strong>
+                <small>Light lavender surfaces with purple accents</small>
+                <span class="theme-option-status" data-theme-status="lavender">Select theme</span>
+            </span>
+        </button>
+
+    </div>
+
+
+<div class="font-color-picker">
+    <div class="font-color-info">
+        <h3>Custom Font Colour</h3>
+        <p>Choose the text colour for your workspace.</p>
+    </div>
+
+    <div class="font-color-controls">
+        <input
+            type="color"
+            id="custom-font-color"
+            value="#ffffff"
+            aria-label="Choose custom font colour"
+        >
+
+        <span id="font-color-value">#FFFFFF</span>
+
+        <button
+            type="button"
+            class="text-btn"
+            onclick="resetFontColor()"
+        >
+            Reset Colour
+        </button>
+    </div>
+</div>
+
+    <p id="theme-studio-message" class="form-note" aria-live="polite">
+        Choose a theme to preview it across your workspace.
+    </p>
+
+</section>
+
+<!-- END THEME STUDIO -->
+
+
+
+        <!-- =================================
+             FOOTER
+        ================================== -->
+
+        <footer class="app-footer">
+
+            <span>PromptMate</span>
+
+            <span>Designed to make AI prompting easier.</span>
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<!-- =================================
+     JAVASCRIPT
+================================== -->
+
+
+<script>
+(function () {
+    const sidebar = document.getElementById("app-sidebar");
+    const hoverZone = document.getElementById("sidebar-hover-zone");
+
+    if (!sidebar || !hoverZone) return;
+
+    const EDGE_WIDTH = 18;
+
+    function updateSidebarVisibility(event) {
+        const pointerIsAtEdge = event.clientX <= EDGE_WIDTH;
+        const pointerIsInsideSidebar = sidebar.matches(":hover");
+
+        document.body.classList.toggle(
+            "sidebar-open",
+            pointerIsAtEdge || pointerIsInsideSidebar
+        );
+    }
+
+    document.addEventListener("mousemove", updateSidebarVisibility);
+
+    // Support touch devices: tap the left edge to open, tap outside to close.
+    hoverZone.addEventListener("click", function () {
+        document.body.classList.add("sidebar-open");
+    });
+
+    document.addEventListener("touchstart", function (event) {
+        const touch = event.touches && event.touches[0];
+        if (!touch) return;
+
+        const tappedSidebar = sidebar.contains(event.target);
+        const tappedEdge = touch.clientX <= EDGE_WIDTH;
+
+        if (tappedEdge) {
+            document.body.classList.add("sidebar-open");
+        } else if (!tappedSidebar) {
+            document.body.classList.remove("sidebar-open");
+        }
+    }, { passive: true });
+})();
+</script>
+
+<script>
+    window.PROMPTMATE_USER_ID = {{ user_id | tojson }};
+</script>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>

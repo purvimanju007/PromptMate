@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | PromptMate</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            overflow: hidden;
+            font-family: 'DM Sans', sans-serif;
+            color: #f7f3ff;
+            background: linear-gradient(135deg, #100b20, #302052, #17132d);
+        }
+
+        .glow {
+            position: fixed;
+            width: 450px;
+            height: 450px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: .22;
+            pointer-events: none;
+        }
+
+        .glow-one {
+            background: #9a59ff;
+            top: -180px;
+            left: -120px;
+        }
+
+        .glow-two {
+            background: #5939ca;
+            bottom: -200px;
+            right: -100px;
+        }
+
+        .auth-card {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            padding: 43px 38px;
+            border: 1px solid rgba(255,255,255,.13);
+            border-radius: 25px;
+            background: rgba(255,255,255,.085);
+            backdrop-filter: blur(24px);
+            box-shadow: 0 25px 80px rgba(0,0,0,.3);
+            animation: appear .6s ease both;
+        }
+
+        @keyframes appear {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 29px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            color: #c4a5ff;
+        }
+
+        .logo-icon {
+            display: inline-grid;
+            place-items: center;
+            width: 37px;
+            height: 37px;
+            margin-right: 7px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, #a879ff, #6840cf);
+            color: white;
+            vertical-align: middle;
+        }
+
+        h1 {
+            text-align: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 29px;
+            margin-bottom: 9px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #c3bad7;
+            font-size: 13px;
+            margin-bottom: 31px;
+        }
+
+        .message {
+            margin-bottom: 18px;
+            padding: 12px;
+            border: 1px solid rgba(255,110,130,.2);
+            border-radius: 10px;
+            background: rgba(255,90,110,.1);
+            color: #ffb5c0;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 9px;
+            color: #e5ddef;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            height: 50px;
+            padding: 0 15px;
+            border: 1px solid rgba(255,255,255,.16);
+            border-radius: 11px;
+            outline: none;
+            background: rgba(255,255,255,.07);
+            color: white;
+            font-family: inherit;
+            font-size: 13px;
+            transition: .25s ease;
+        }
+
+        input::placeholder {
+            color: #aaa0bd;
+        }
+
+        input:focus {
+            border-color: #b18aff;
+            box-shadow: 0 0 0 3px rgba(177,138,255,.12);
+            background: rgba(255,255,255,.1);
+        }
+
+        .password-input {
+            padding-right: 70px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 13px;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #c4a5ff;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .forgot {
+            display: block;
+            margin-top: -8px;
+            margin-bottom: 23px;
+            text-align: right;
+            font-size: 12px;
+        }
+
+        a {
+            color: #c4a5ff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover {
+            color: white;
+        }
+
+        .submit-btn {
+            width: 100%;
+            height: 51px;
+            border: none;
+            border-radius: 11px;
+            background: linear-gradient(110deg, #a477f5, #7651d5);
+            color: white;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(135,85,230,.25);
+            transition: .25s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(135,85,230,.4);
+        }
+
+        .signup-link {
+            margin-top: 26px;
+            text-align: center;
+            color: #c3bad7;
+            font-size: 12px;
+        }
+
+        .footer {
+            margin-top: 26px;
+            padding-top: 17px;
+            border-top: 1px solid rgba(255,255,255,.09);
+            color: #91869f;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 35px 24px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                transition-duration: .01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="glow glow-one"></div>
+    <div class="glow glow-two"></div>
+
+    <main class="auth-card">
+
+        <div class="logo">
+            <span class="logo-icon">✦</span>PromptMate
+        </div>
+
+        <h1>Welcome Back</h1>
+
+        <p class="subtitle">
+            Sign in to continue creating better prompts.
+        </p>
+
+        {% with messages = get_flashed_messages() %}
+            {% for message in messages %}
+                <div class="message">{{ message }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+
+            <div class="form-group">
+                <label for="email">EMAIL ADDRESS</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    autocomplete="email"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">PASSWORD</label>
+
+                <div class="input-wrap">
+                    <input
+                        class="password-input"
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    <button
+                        type="button"
+                        class="toggle-password"
+                        onclick="togglePassword()"
+                    >SHOW</button>
+                </div>
+            </div>
+
+            <a class="forgot" href="{{ url_for('forgot_password') }}">
+                Forgot Password?
+            </a>
+
+            <button type="submit" class="submit-btn">
+                Sign In &nbsp; →
+            </button>
+
+        </form>
+
+        <div class="signup-link">
+            Don't have an account?
+            <a href="{{ url_for('signup') }}">Create Account</a>
+        </div>
+
+        <div class="footer">
+            Secure access to your personal PromptMate workspace.
+        </div>
+
+    </main>
+
+    <script>
+        function togglePassword() {
+            const input = document.getElementById("password");
+            const button = document.querySelector(".toggle-password");
+
+            if (input.type === "password") {
+                input.type = "text";
+                button.textContent = "HIDE";
+            } else {
+                input.type = "password";
+                button.textContent = "SHOW";
+            }
+        }
+    </script>
+
+</body>
+</html>

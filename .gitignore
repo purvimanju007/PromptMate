@@ -1,0 +1,17 @@
+# Environment secrets
+.env
+.env.*
+
+# Python environment
+venv/
+__pycache__/
+*.pyc
+
+# Local database
+promptmate.db
+
+# Backup files
+app_backup.py
+
+# macOS
+.DS_Store

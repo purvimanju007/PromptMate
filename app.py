@@ -1,0 +1,550 @@
+
+
+import os
+import sqlite3
+from functools import wraps
+from datetime import timedelta
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    session,
+    redirect,
+    url_for,
+    flash
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from dotenv import load_dotenv
+from openai import OpenAI, APIError, RateLimitError, AuthenticationError
+
+# Load environment variables from .env
+load_dotenv()
+
+app = Flask(__name__)
+
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
+
+if not app.config["SECRET_KEY"]:
+    raise RuntimeError("FLASK_SECRET_KEY is missing from your .env file.")
+
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = False
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=7)
+
+# Groq uses an OpenAI-compatible API
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+client = None
+
+if GROQ_API_KEY:
+    client = OpenAI(
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1"
+    )
+
+MODEL = "openai/gpt-oss-120b"
+
+# ==========================================
+# AUTHENTICATION PROTECTION
+# ==========================================
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if "user_id" not in session:
+            if request.path.startswith("/api/"):
+                return jsonify({
+                    "error": "Authentication required. Please log in."
+                }), 401
+
+            return redirect(url_for("login"))
+
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+# ==========================================
+# PROMPTMATE USER DATABASE
+# ==========================================
+
+DATABASE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "promptmate.db"
+)
+
+
+def get_db_connection():
+    connection = sqlite3.connect(DATABASE)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def init_database():
+    connection = get_db_connection()
+
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+
+# Create the database and users table when the app starts.
+init_database()
+
+# ==========================================
+# USER REGISTRATION
+# ==========================================
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if len(name) < 2 or len(name) > 80:
+            flash("Name must be between 2 and 80 characters.")
+            return render_template("signup.html")
+
+        if not email or "@" not in email:
+            flash("Enter a valid email address.")
+            return render_template("signup.html")
+
+        if len(password) < 10:
+            flash("Password must contain at least 10 characters.")
+            return render_template("signup.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return render_template("signup.html")
+
+        connection = get_db_connection()
+
+        try:
+            cursor = connection.execute(
+                """
+                INSERT INTO users (name, email, password_hash)
+                VALUES (?, ?, ?)
+                """,
+                (name, email, generate_password_hash(password))
+            )
+
+            connection.commit()
+
+            session.clear()
+            session["user_id"] = cursor.lastrowid
+            session["user_name"] = name
+            session.permanent = True
+
+            return redirect(url_for("app_home"))
+
+        except sqlite3.IntegrityError:
+            flash("An account with this email already exists.")
+            return render_template("signup.html")
+
+        finally:
+            connection.close()
+
+    return render_template("signup.html")
+
+# ==========================================
+# USER LOGIN
+# ==========================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        connection = get_db_connection()
+
+        try:
+            user = connection.execute(
+                "SELECT * FROM users WHERE email = ?",
+                (email,)
+            ).fetchone()
+        finally:
+            connection.close()
+
+        if user and check_password_hash(user["password_hash"], password):
+            session.clear()
+            session["user_id"] = user["id"]
+            session["user_name"] = user["name"]
+            session.permanent = True
+
+            return redirect(url_for("app_home"))
+
+        flash("Incorrect email or password.")
+        return render_template("login.html")
+
+    return render_template("login.html")
+# PASSWORD RESET
+# ==========================================
+
+def get_reset_serializer():
+    return URLSafeTimedSerializer(app.config["SECRET_KEY"])
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+
+        connection = get_db_connection()
+
+        try:
+            user = connection.execute(
+                "SELECT * FROM users WHERE email = ?",
+                (email,)
+            ).fetchone()
+        finally:
+            connection.close()
+
+        flash(
+            "If an account exists with that email, a reset link has been generated."
+        )
+
+        if user and app.debug:
+            token = get_reset_serializer().dumps(user["id"], salt="password-reset")
+            reset_url = url_for(
+                "reset_password",
+                token=token,
+                _external=True
+            )
+            print("PASSWORD RESET LINK:", reset_url)
+
+        return redirect(url_for("forgot_password"))
+
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    try:
+        user_id = get_reset_serializer().loads(
+            token,
+            salt="password-reset",
+            max_age=1800
+        )
+    except (BadSignature, SignatureExpired):
+        flash("This password reset link is invalid or has expired.")
+        return redirect(url_for("forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if len(password) < 10:
+            flash("Password must contain at least 10 characters.")
+            return render_template("reset_password.html", token=token)
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return render_template("reset_password.html", token=token)
+
+        connection = get_db_connection()
+
+        try:
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (generate_password_hash(password), user_id)
+            )
+            connection.commit()
+        finally:
+            connection.close()
+
+        flash("Password updated successfully. Please sign in.")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html", token=token)
+
+# Safely read text values
+def get_text(data, key, default=""):
+    value = data.get(key, default)
+    return value.strip() if isinstance(value, str) else default
+
+
+# Check AI connection
+def ai_status():
+    if not client:
+        return {
+            "configured": False,
+            "message": "Groq API key is missing. Check your .env file."
+        }
+
+    return {
+        "configured": True,
+        "message": "Groq AI configuration detected.",
+        "provider": "Groq",
+        "model": MODEL
+    }
+
+
+# Generate AI response
+def ask_ai(system_message, user_message):
+    if not client:
+        raise ValueError("Groq API key is not configured.")
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ],
+        temperature=0.5,
+        max_tokens=1800
+    )
+
+    return response.choices[0].message.content.strip()
+
+
+# Handle API errors consistently
+def handle_ai_error(error):
+    if isinstance(error, ValueError):
+        return jsonify({"error": str(error)}), 503
+
+    if isinstance(error, AuthenticationError):
+        return jsonify({
+            "error": "Groq authentication failed. Check your API key."
+        }), 401
+
+    if isinstance(error, RateLimitError):
+        return jsonify({
+            "error": "Groq free-tier rate limit reached. Please wait and try again."
+        }), 429
+
+    if isinstance(error, APIError):
+        return jsonify({
+            "error": "Groq API error. Please try again later."
+        }), 502
+
+    app.logger.exception("Unexpected AI error")
+    return jsonify({
+        "error": "An unexpected error occurred. Please try again."
+    }), 500
+
+
+# Home page
+# ==========================================
+# HOME AND DASHBOARD ROUTES
+# ==========================================
+
+@app.route("/")
+def home():
+    if "user_id" in session:
+        return redirect(url_for("app_home"))
+
+    return redirect(url_for("login"))
+
+
+@app.route("/app")
+@login_required
+def app_home():
+    return render_template(
+        "index.html",
+        user_name=session.get("user_name"),
+        user_id=session.get("user_id")
+    )
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# Existing backend status route
+@app.route("/api/status")
+def status():
+    return jsonify({
+        "status": "success",
+        "message": "PromptMate backend is working!"
+    })
+
+
+# AI status route
+@app.route("/api/ai-status")
+def ai_status_route():
+    return jsonify(ai_status())
+
+
+# Generate structured prompts
+@app.route("/api/generate", methods=["POST"])
+@login_required
+def generate():
+
+    data = request.get_json(silent=True) or {}
+
+    category = get_text(data, "category", "General")
+    goal = get_text(data, "goal")
+    context = get_text(data, "context")
+    audience = get_text(data, "audience", "Beginner")
+    tone = get_text(data, "tone", "Simple")
+    output_format = get_text(data, "format", "Bullet Points")
+
+    if not goal:
+        return jsonify({"error": "Please enter your goal."}), 400
+
+    if len(goal) > 2000 or len(context) > 4000:
+        return jsonify({"error": "Your input is too long."}), 400
+
+    system_message = """
+You are PromptMate, an advanced AI prompt engineering assistant.
+
+Your job is to transform user requirements into clear,
+detailed, effective and well-structured AI prompts.
+
+Preserve the user's original intention.
+Remove ambiguity, add useful structure and make instructions actionable.
+Never invent user requirements.
+Return only the completed prompt.
+"""
+
+    user_message = f"""
+Create a high-quality AI prompt using these details.
+
+TASK CATEGORY:
+{category}
+
+USER GOAL:
+{goal}
+
+ADDITIONAL CONTEXT:
+{context if context else "No additional context provided."}
+
+TARGET AUDIENCE:
+{audience}
+
+PREFERRED TONE:
+{tone}
+
+OUTPUT FORMAT:
+{output_format}
+
+Include:
+1. A suitable AI role.
+2. A clear description of the task.
+3. Relevant context and constraints.
+4. Specific instructions.
+5. The expected output structure.
+6. Guidance to avoid unsupported assumptions.
+
+Make the final prompt specific, useful and ready to copy.
+"""
+
+    try:
+        prompt = ask_ai(system_message, user_message)
+
+        return jsonify({
+            "status": "success",
+            "prompt": prompt,
+            "provider": "Groq",
+            "model": MODEL
+        })
+
+    except Exception as error:
+        return handle_ai_error(error)
+
+
+# Improve existing prompts
+@app.route("/api/improve", methods=["POST"])
+@login_required
+def improve():
+
+    data = request.get_json(silent=True) or {}
+
+    original_prompt = get_text(data, "prompt")
+    audience = get_text(data, "audience", "General audience")
+    tone = get_text(data, "tone", "Clear and professional")
+    output_format = get_text(data, "format", "Structured response")
+
+    if not original_prompt:
+        return jsonify({
+            "error": "Please enter a prompt to improve."
+        }), 400
+
+    if len(original_prompt) > 4000:
+        return jsonify({
+            "error": "Your prompt is too long. Maximum 4000 characters."
+        }), 400
+
+    system_message = """
+You are PromptMate, an expert prompt engineer.
+
+Improve prompts by making them clearer, more specific,
+better structured and more useful.
+
+Preserve the original intention.
+Do not change the task into something different.
+Do not invent facts or requirements.
+
+Return a complete improved prompt.
+"""
+
+    user_message = f"""
+Improve the following prompt.
+
+ORIGINAL PROMPT:
+{original_prompt}
+
+TARGET AUDIENCE:
+{audience}
+
+PREFERRED TONE:
+{tone}
+
+EXPECTED OUTPUT FORMAT:
+{output_format}
+
+Your improved prompt should:
+1. Define an appropriate AI role.
+2. Clarify the main task.
+3. Preserve the original meaning.
+4. Add structure and actionable instructions.
+5. Include relevant constraints.
+6. Specify the expected output.
+7. Avoid unnecessary complexity.
+8. Ask clarifying questions if essential information is missing.
+
+Return only the improved prompt.
+"""
+
+    try:
+        improved_prompt = ask_ai(system_message, user_message)
+
+        improvements = [
+            "Clarified the main task and intended outcome.",
+            "Improved structure and instruction quality.",
+            "Added more specific guidance for the AI.",
+            "Aligned the response with your selected audience, tone and format."
+        ]
+
+        return jsonify({
+            "status": "success",
+            "original_prompt": original_prompt,
+            "improved_prompt": improved_prompt,
+            "improvements": improvements,
+            "provider": "Groq",
+            "model": MODEL
+        })
+
+    except Exception as error:
+        return handle_ai_error(error)
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)
